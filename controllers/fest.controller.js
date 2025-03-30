@@ -35,15 +35,16 @@ exports.uploadFest = multer({
 //? การเอาข้อมูลที่ส่งมาจาก Frontend เพิ่ม(Create/Insert) ลงตารางใน DB
 exports.createFest = async (req, res) => {
   try {
+    const { festName, festDetail, festState, festCost, userId, festNumDay } = req.body;
     const result = await prisma.fest_tb.create({
       data: {
-        festName: req.body.festName,
-        festDetail: req.body.festDetail,
-        festState: req.body.festState,
-        festCost: parseFloat(req.body.festCost),
-        userId:parseInt(req.body.userId),
-        festNumDay:parseInt(req.body.festNumDay),
-        festImage:req.file ? req.file.path.replace("images\\fests\\", '') : "",
+        festName: festName,
+        festDetail: festDetail,
+        festState: festState,
+        festCost: parseFloat(festCost),
+        userId: parseInt(userId),
+        festNumDay: parseInt(festNumDay),
+        festImage: req.file ? req.file.path.replace("images\\fests\\", '') : "",
       }
     })
 
@@ -58,7 +59,118 @@ exports.createFest = async (req, res) => {
     console.log('Error', err);
   }
 }
-//?-------------------------------------------------
 
+//? ดึงข้อมูล Fest ทั้งหมดของ User หนึ่งๆ จากตารางใน DB
+exports.getAllFestByUser = async (req, res) => {
+  try {
+    const result = await prisma.fest_tb.findMany({
+      where: {
+        userId: parseInt(req.params.userId)
+      }
+    });
+    res.status(200).json({
+      message: "Ok",
+      info: result
+    })
+  } catch (err) {
+    res.status(500).json({
+      message: `พบเจอปัญหาในการทำงาน: ${err}`
+    })
+    console.log('Error', err);
+  }
+}
 
+//? ดึงข้อมูล Fest หนึ่งๆ เพื่อจะเอาไป .... เช่น แก้ไข เป็นต้น
+exports.getOnlyFest = async (req, res) => {
+  try {
+    const result = await prisma.fest_tb.findFirst({
+      where: {
+        festId: parseInt(req.params.festId)
+      }
+    });
+    res.status(200).json({
+      message: "Ok",
+      info: result
+    })
+  } catch (err) {
+    res.status(500).json({
+      message: `พบเจอปัญหาในการทำงาน: ${err}`
+    })
+    console.log('Error', err);
+  }
+}
+//? แก้ไข Fest
+exports.updateFest = async (request, response) => {
+  try {
+    let result = {};
+    if (request.file) {
+      const festResult = await prisma.fest_tb.findFirst({
+        where: {
+          festId: parseInt(request.params.festId),
+        },
+      });
 
+      if (festResult.userImage) {
+        fs.unlinkSync(path.join("images/fests", festResult.festImage)); //ลบรูปทิ้ง
+      }
+
+      result = await prisma.fest_tb.update({
+        where: {
+          festId: parseInt(request.params.festId),
+        },
+        data: {
+          festName: request.body.festName,
+          festDetail: request.body.festDetail,
+          festState: request.body.festState,
+          festCost: parseFloat(request.body.festCost),
+          userId: parseInt(request.body.userId),
+          festNumDay: parseInt(request.body.festNumDay),
+          festImage: request.file.path.replace("images\\fests\\", ""),
+        },
+      });
+    } else {
+      result = await prisma.fest_tb.update({
+        where: {
+          festId: parseInt(request.params.festId),
+        },
+        data: {
+          festName: request.body.festName,
+          festDetail: request.body.festDetail,
+          festState: request.body.festState,
+          festCost: parseFloat(request.body.festCost),
+          userId: parseInt(request.body.userId),
+          festNumDay: parseInt(request.body.festNumDay),
+        },
+      });
+    }
+    response.status(200).json({
+      message: "Ok",
+      info: result,
+    });
+  } catch (error) {
+    response.status(500).json({
+      message: `พบปัญหาในการทำงาน: ${error}`,
+    });
+    console.log(`Error: ${error}`);
+  }
+};
+//? ลบ fest หนึ่งๆ
+exports.deleteFest = async (req, res) => {
+  try {
+    const result = await prisma.fest_tb.delete({
+      where: {
+        festId: parseInt(req.params.festId)
+      }
+    });
+    res.status(200).json({
+      message: "ลบเรียบร้อย",
+      info: result
+    })
+  } catch (err) {
+    res.status(500).json({
+      message: `พบเจอปัญหาในการทำงาน: ${err}`
+    })
+    console.log('Error', err);
+  }
+}
+//? --------------------------------------------------------------------
